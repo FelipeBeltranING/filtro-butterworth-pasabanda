@@ -1,29 +1,27 @@
 """
-Filtrado por ecuación en diferencias y respuesta en frecuencia.
+FILTRADO POR ECUACIÓN EN DIFERENCIAS Y ANÁLISIS EN FRECUENCIA
 
-H(z) = Y(z)/X(z) = (b0 + b1 z^-1 + ... + b4 z^-4) / (1 + a1 z^-1 + ... + a4 z^-4)
+Paso 6. Ecuación en diferencias (transformada Z inversa de Y(z)/X(z)):
+            y(n) = b0 x(n) + b2 x(n-2) + b4 x(n-4)
+                   - a1 y(n-1) - a2 y(n-2) - a3 y(n-3) - a4 y(n-4)
 
-Aplicando la transformada Z inversa:
-    y(n) = b0 x(n) + b1 x(n-1) + ... + b4 x(n-4) - a1 y(n-1) - ... - a4 y(n-4)
+Respuesta en frecuencia:  H(Omega) = sum(b_k e^{-jk Omega}) / sum(a_k e^{-jk Omega})
+Espectro de una señal:    X(Omega) = sum_n x(n) e^{-jn Omega}
 """
 import math
 import numpy as np
 
 
 def filtrar(x, num, den):
-    """Aplica la ecuación en diferencias muestra por muestra."""
-    x = list(x)
+    """Paso 6. Ecuación en diferencias aplicada muestra por muestra."""
+    # Condiciones iniciales en cero: x(-1)...x(-4) = 0 y y(-1)...y(-4) = 0
+    x = [0.0] * 4 + list(x)
     y = [0.0] * len(x)
-    for n in range(len(x)):
-        suma = 0.0
-        for k in range(len(num)):          # parte no recursiva: x(n-k)
-            if n - k >= 0:
-                suma += num[k] * x[n - k]
-        for k in range(1, len(den)):       # parte recursiva: y(n-k)
-            if n - k >= 0:
-                suma -= den[k] * y[n - k]
-        y[n] = suma
-    return np.array(y)
+    for n in range(4, len(x)):
+        y[n] = (num[0] * x[n] + num[2] * x[n - 2] + num[4] * x[n - 4]
+                - den[1] * y[n - 1] - den[2] * y[n - 2]
+                - den[3] * y[n - 3] - den[4] * y[n - 4])
+    return y[4:]
 
 
 def respuesta_frecuencia(num, den, frecuencias, fs):
@@ -33,14 +31,14 @@ def respuesta_frecuencia(num, den, frecuencias, fs):
     """
     magnitudes = []
     for f in frecuencias:
-        W = 2 * math.pi * f / fs
-        re_n = sum(num[k] * math.cos(k * W) for k in range(len(num)))
-        im_n = -sum(num[k] * math.sin(k * W) for k in range(len(num)))
-        re_d = sum(den[k] * math.cos(k * W) for k in range(len(den)))
-        im_d = -sum(den[k] * math.sin(k * W) for k in range(len(den)))
-        magnitudes.append(math.sqrt(re_n ** 2 + im_n ** 2) /
-                          math.sqrt(re_d ** 2 + im_d ** 2))
-    return np.array(magnitudes)
+        Om = 2 * math.pi * f / fs
+        re_n = sum(num[k] * math.cos(k * Om) for k in range(5))
+        im_n = -sum(num[k] * math.sin(k * Om) for k in range(5))
+        re_d = sum(den[k] * math.cos(k * Om) for k in range(5))
+        im_d = -sum(den[k] * math.sin(k * Om) for k in range(5))
+        magnitudes.append(math.sqrt(re_n ** 2 + im_n ** 2)
+                          / math.sqrt(re_d ** 2 + im_d ** 2))
+    return magnitudes
 
 
 def espectro(x, frecuencias, fs):
@@ -50,10 +48,18 @@ def espectro(x, frecuencias, fs):
     """
     x = np.asarray(x, dtype=float)
     n = np.arange(len(x))
-    magnitudes = np.zeros(len(frecuencias))
-    for i, f in enumerate(frecuencias):
-        W = 2 * math.pi * f / fs
-        re = np.sum(x * np.cos(n * W))
-        im = -np.sum(x * np.sin(n * W))
-        magnitudes[i] = math.sqrt(re ** 2 + im ** 2)
+    magnitudes = []
+    for f in frecuencias:
+        Om = 2 * math.pi * f / fs
+        re = np.sum(x * np.cos(n * Om))
+        im = -np.sum(x * np.sin(n * Om))
+        magnitudes.append(math.sqrt(re ** 2 + im ** 2))
     return magnitudes
+
+
+if __name__ == "__main__":
+    # Ejemplo: filtrar x(n) = [1, -1, 2] con el filtro fc1 = 1000 Hz, fc2 = 3500 Hz, fs = 44100 Hz
+    from diseno import disenar_filtro
+    f = disenar_filtro(1000, 3500, 44100)
+    print("y(n) =", [round(v, 6) for v in filtrar([1, -1, 2], f["num"], f["den"])])
+    print("||H|| en fc1 y fc2 =", respuesta_frecuencia(f["num"], f["den"], [1000, 3500], 44100))
