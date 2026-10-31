@@ -1,20 +1,8 @@
-"""
-FILTRADO POR ECUACIÓN EN DIFERENCIAS Y ANÁLISIS EN FRECUENCIA
-
-Paso 6. Ecuación en diferencias (transformada Z inversa de Y(z)/X(z)):
-            y(n) = b0 x(n) + b2 x(n-2) + b4 x(n-4)
-                   - a1 y(n-1) - a2 y(n-2) - a3 y(n-3) - a4 y(n-4)
-
-Respuesta en frecuencia:  H(Omega) = sum(b_k e^{-jk Omega}) / sum(a_k e^{-jk Omega})
-Espectro de una señal:    X(Omega) = sum_n x(n) e^{-jn Omega}
-"""
 import math
 import numpy as np
 
 
 def filtrar(x, num, den):
-    """Paso 6. Ecuación en diferencias aplicada muestra por muestra."""
-    # Condiciones iniciales en cero: x(-1)...x(-4) = 0 y y(-1)...y(-4) = 0
     x = [0.0] * 4 + list(x)
     y = [0.0] * len(x)
     for n in range(4, len(x)):
@@ -25,10 +13,6 @@ def filtrar(x, num, den):
 
 
 def respuesta_frecuencia(num, den, frecuencias, fs):
-    """
-    ||H(Omega)|| con Omega = 2 pi f / fs y
-    H(Omega) = sum(b_k e^{-jk Omega}) / sum(a_k e^{-jk Omega})
-    """
     magnitudes = []
     for f in frecuencias:
         Om = 2 * math.pi * f / fs
@@ -42,10 +26,6 @@ def respuesta_frecuencia(num, den, frecuencias, fs):
 
 
 def espectro(x, frecuencias, fs):
-    """
-    ||X(Omega)|| = sqrt(Re(X)^2 + Im(X)^2) con
-    X(Omega) = sum_n x(n) e^{-jn Omega} = sum_n x(n) (cos(n Omega) - j sen(n Omega))
-    """
     x = np.asarray(x, dtype=float)
     n = np.arange(len(x))
     magnitudes = []
@@ -58,7 +38,6 @@ def espectro(x, frecuencias, fs):
 
 
 if __name__ == "__main__":
-    # Ejemplo: filtrar x(n) = [1, -1, 2] con el filtro fc1 = 1000 Hz, fc2 = 3500 Hz, fs = 44100 Hz
     from diseno import disenar_filtro
     num, den = disenar_filtro(1000, 3500, 44100)
     print("y(n) =", filtrar([1, -1, 2], num, den))

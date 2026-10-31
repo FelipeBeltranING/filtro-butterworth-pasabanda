@@ -6,6 +6,7 @@ se encarga de la interfaz, el micrófono, la reproducción y las gráficas.
 """
 import math
 import threading
+import time
 import tkinter as tk
 from tkinter import ttk, messagebox
 
@@ -69,6 +70,7 @@ class Aplicacion:
         estilo.configure("TButton", padding=5)
         estilo.configure("Ok.TLabel", foreground="#2e7d32")
         estilo.configure("Error.TLabel", foreground="#c62828")
+        estilo.configure("Contador.TLabel", font=("Segoe UI", 13, "bold"), foreground="#c62828")
 
     def _construir_panel_izquierdo(self):
         panel = ttk.Frame(self.raiz, padding=12)
@@ -111,6 +113,10 @@ class Aplicacion:
         self.btn_grabar = ttk.Button(audio, text="●  Grabar voz",
                                      style="Accion.TButton", command=self.grabar)
         self.btn_grabar.pack(fill=tk.X)
+        self.lbl_contador = ttk.Label(audio, text="", style="Contador.TLabel", anchor="center")
+        self.lbl_contador.pack(fill=tk.X, pady=(6, 0))
+        self.barra_grab = ttk.Progressbar(audio, mode="determinate", maximum=1.0)
+        self.barra_grab.pack(fill=tk.X)
         fila = ttk.Frame(audio)
         fila.pack(fill=tk.X, pady=(6, 0))
         self.btn_orig = ttk.Button(fila, text="▶ Original", state=tk.DISABLED,
@@ -118,9 +124,7 @@ class Aplicacion:
         self.btn_orig.pack(side=tk.LEFT, expand=True, fill=tk.X)
         self.btn_filt = ttk.Button(fila, text="▶ Filtrada", state=tk.DISABLED,
                                    command=lambda: self.reproducir(self.y))
-        self.btn_filt.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=4)
-        ttk.Button(fila, text="■ Detener", command=sd.stop).pack(
-            side=tk.LEFT, expand=True, fill=tk.X)
+        self.btn_filt.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(4, 0))
 
         # Diseño matemático
         diseno = ttk.LabelFrame(panel, text="Diseño matemático", padding=6)
@@ -196,22 +200,35 @@ class Aplicacion:
             self._graficar(None, None)
 
     def grabar(self):
+        """Graba durante la duración indicada mostrando una cuenta regresiva."""
         if self.num is None:
             return
         fs, _, _, dur = self.params
-        self._ocupado(True, f"Grabando {dur:g} s... habla ahora.")
+        sd.stop()                                   # detiene cualquier reproducción
+        try:
+            self._grabacion = sd.rec(int(dur * fs), samplerate=int(fs),
+                                     channels=1, dtype="float64")
+        except Exception as e:
+            self._error_audio(e)
+            return
+        self._ocupado(True, "Grabando... habla ahora.")
+        self._inicio = time.monotonic()
+        self._cuenta_regresiva()
 
-        def tarea():
-            try:
-                grab = sd.rec(int(dur * fs), samplerate=int(fs), channels=1, dtype="float64")
-                sd.wait()
-            except Exception as e:
-                self.raiz.after(0, lambda: self._error_audio(e))
-                return
-            self.x = grab[:, 0]
-            self.raiz.after(0, self._procesar)
-
-        threading.Thread(target=tarea, daemon=True).start()
+    def _cuenta_regresiva(self):
+        dur = self.params[3]
+        transcurrido = time.monotonic() - self._inicio
+        restante = dur - transcurrido
+        if restante > 0:
+            self.lbl_contador.config(text=f"● Grabando...  {math.ceil(restante)} s")
+            self.barra_grab.config(value=transcurrido / dur)
+            self.raiz.after(100, self._cuenta_regresiva)
+            return
+        sd.wait()                                   # asegura que la grabación terminó
+        self.x = self._grabacion[:, 0]
+        self.barra_grab.config(value=1.0)
+        self.lbl_contador.config(text="Grabación terminada")
+        self._procesar()
 
     def _procesar(self):
         fs = self.params[0]
@@ -231,8 +248,8 @@ class Aplicacion:
     def _terminar_proceso(self, X, Y):
         self._graficar(X, Y)
         self._ocupado(False, "Listo. Reproduce las señales para comparar.")
-        self.btn_orig.config(state=tk.NORMAL)
-        self.btn_filt.config(state=tk.NORMAL)
+        self.lbl_contador.config(text="")
+        self.barra_grab.config(value=0)
 
     def reproducir(self, senal):
         if senal is None:
@@ -248,6 +265,9 @@ class Aplicacion:
         estado = tk.DISABLED if ocupado else tk.NORMAL
         self.btn_grabar.config(state=estado)
         self.btn_disenar.config(state=estado)
+        audio = tk.DISABLED if ocupado or self.y is None else tk.NORMAL
+        self.btn_orig.config(state=audio)
+        self.btn_filt.config(state=audio)
         self.lbl_estado.config(text=mensaje)
 
     # ------------------------------------------------------------- Mostrar
