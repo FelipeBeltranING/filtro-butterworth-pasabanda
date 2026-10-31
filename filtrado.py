@@ -60,6 +60,6 @@ def espectro(x, frecuencias, fs):
 if __name__ == "__main__":
     # Ejemplo: filtrar x(n) = [1, -1, 2] con el filtro fc1 = 1000 Hz, fc2 = 3500 Hz, fs = 44100 Hz
     from diseno import disenar_filtro
-    f = disenar_filtro(1000, 3500, 44100)
-    print("y(n) =", [round(v, 6) for v in filtrar([1, -1, 2], f["num"], f["den"])])
-    print("||H|| en fc1 y fc2 =", respuesta_frecuencia(f["num"], f["den"], [1000, 3500], 44100))
+    num, den = disenar_filtro(1000, 3500, 44100)
+    print("y(n) =", filtrar([1, -1, 2], num, den))
+    print("||H|| en fc1 y fc2 =", respuesta_frecuencia(num, den, [1000, 3500], 44100))

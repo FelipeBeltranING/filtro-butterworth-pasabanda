@@ -4,6 +4,7 @@ Interfaz gráfica del filtro Butterworth pasabanda.
 El diseño del filtro está en diseno.py y el filtrado en filtrado.py; este archivo solo
 se encarga de la interfaz, el micrófono, la reproducción y las gráficas.
 """
+import math
 import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -23,6 +24,22 @@ COLOR_PASO = "#c8e6c9"
 COLOR_RECHAZO = "#ffcdd2"
 
 
+def valores_intermedios(fc1, fc2, fs):
+    """Recalcula los pasos intermedios del diseño solo para mostrarlos en el panel."""
+    a = math.tan(math.pi * fc1 / fs)
+    b = math.tan(math.pi * fc2 / fs)
+    B = b - a
+    W = a * b
+    A = math.sqrt(2) * B
+    C = 2 * W + B ** 2
+    D = math.sqrt(2) * B * W
+    E = W ** 2
+    n = [B ** 2, 0.0, -2 * B ** 2, 0.0, B ** 2]
+    d = [1 + A + C + D + E, -4 - 2 * A + 2 * D + 4 * E, 6 - 2 * C + 6 * E,
+         -4 + 2 * A - 2 * D + 4 * E, 1 - A + C - D + E]
+    return {"a": a, "b": b, "B": B, "W": W, "A": A, "C": C, "D": D, "E": E, "n": n, "d": d}
+
+
 class Aplicacion:
     def __init__(self, raiz):
         self.raiz = raiz
@@ -30,7 +47,8 @@ class Aplicacion:
         self.raiz.geometry("1350x820")
         self.raiz.minsize(1100, 700)
 
-        self.filtro = None
+        self.num = None        # coeficientes b0..b4
+        self.den = None        # coeficientes a0..a4
         self.params = None
         self.x = None          # señal grabada
         self.y = None          # señal filtrada
@@ -170,7 +188,7 @@ class Aplicacion:
             messagebox.showerror("Parámetros no válidos", str(e))
             return
         fs, fc1, fc2, _ = self.params
-        self.filtro = disenar_filtro(fc1, fc2, fs)
+        self.num, self.den = disenar_filtro(fc1, fc2, fs)
         self._mostrar_diseno()
         if self.x is not None:
             self._procesar()          # vuelve a filtrar la grabación con el nuevo diseño
@@ -178,7 +196,7 @@ class Aplicacion:
             self._graficar(None, None)
 
     def grabar(self):
-        if self.filtro is None:
+        if self.num is None:
             return
         fs, _, _, dur = self.params
         self._ocupado(True, f"Grabando {dur:g} s... habla ahora.")
@@ -197,7 +215,7 @@ class Aplicacion:
 
     def _procesar(self):
         fs = self.params[0]
-        num, den = self.filtro["num"], self.filtro["den"]
+        num, den = self.num, self.den
         self._ocupado(True, "Filtrando y calculando espectros...")
 
         def tarea():
@@ -234,9 +252,9 @@ class Aplicacion:
 
     # ------------------------------------------------------------- Mostrar
     def _mostrar_diseno(self):
-        f = self.filtro
         fs, fc1, fc2, _ = self.params
-        n, d, num, den = f["n"], f["d"], f["num"], f["den"]
+        f = valores_intermedios(fc1, fc2, fs)
+        n, d, num, den = f["n"], f["d"], self.num, self.den
         t = []
         t.append(f"fs = {fs:g} Hz   fc1 = {fc1:g} Hz   fc2 = {fc2:g} Hz")
         t.append("")
@@ -289,7 +307,7 @@ class Aplicacion:
     def _graficar(self, X, Y):
         fs, fc1, fc2, _ = self.params
         frecs = np.arange(0, F_MAX + PASO, PASO)
-        H = respuesta_frecuencia(self.filtro["num"], self.filtro["den"], frecs, fs)
+        H = respuesta_frecuencia(self.num, self.den, frecs, fs)
 
         for ax in (self.ax_h, self.ax_x, self.ax_y):
             ax.clear()

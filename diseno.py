@@ -57,21 +57,11 @@ def disenar_filtro(fc1, fc2, fs):
     num = [n0 / d0, 0.0, n2 / d0, 0.0, n4 / d0]           # b0, b1, b2, b3, b4
     den = [1.0, d1 / d0, d2 / d0, d3 / d0, d4 / d0]       # 1, a1, a2, a3, a4
 
-    return {
-        "a": a, "b": b, "B": B, "W": W,
-        "A": A, "C": C, "D": D, "E": E,
-        "n": [n0, 0.0, n2, 0.0, n4],
-        "d": [d0, d1, d2, d3, d4],
-        "num": num, "den": den,
-    }
+    return num, den
 
 
 if __name__ == "__main__":
     # Comprobación del diseño a mano con fc1 = 1000 Hz, fc2 = 3500 Hz, fs = 44100 Hz
-    f = disenar_filtro(1000, 3500, 44100)
-    for clave in ["a", "b", "B", "W", "A", "C", "D", "E"]:
-        print(f"{clave} = {f[clave]:.6f}")
-    print("n =", [round(v, 6) for v in f["n"]])
-    print("d =", [round(v, 6) for v in f["d"]])
-    print("num =", [round(v, 6) for v in f["num"]])
-    print("den =", [round(v, 6) for v in f["den"]])
+    num, den = disenar_filtro(1000, 3500, 44100)
+    print("Coeficientes del numerador   b0..b4:", num)
+    print("Coeficientes del denominador a0..a4:", den)
