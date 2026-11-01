@@ -18,8 +18,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from diseno import disenar_filtro
 from filtrado import filtrar, respuesta_frecuencia, espectro
 
-F_MAX = 8000     # frecuencia máxima graficada (Hz)
-PASO = 5         # resolución de las gráficas (Hz)
+F_MAX = 8000    
+PASO = 5        
 
 COLOR_PASO = "#c8e6c9"
 COLOR_RECHAZO = "#ffcdd2"
@@ -48,11 +48,11 @@ class Aplicacion:
         self.raiz.geometry("1350x820")
         self.raiz.minsize(1100, 700)
 
-        self.num = None        # coeficientes b0..b4
-        self.den = None        # coeficientes a0..a4
+        self.num = None        
+        self.den = None       
         self.params = None
-        self.x = None          # señal grabada
-        self.y = None          # señal filtrada
+        self.x = None          
+        self.y = None          
 
         self._estilos()
         self._construir_panel_izquierdo()
@@ -195,7 +195,7 @@ class Aplicacion:
         self.num, self.den = disenar_filtro(fc1, fc2, fs)
         self._mostrar_diseno()
         if self.x is not None:
-            self._procesar()          # vuelve a filtrar la grabación con el nuevo diseño
+            self._procesar()       
         else:
             self._graficar(None, None)
 
@@ -204,7 +204,7 @@ class Aplicacion:
         if self.num is None:
             return
         fs, _, _, dur = self.params
-        sd.stop()                                   # detiene cualquier reproducción
+        sd.stop()                              
         try:
             self._grabacion = sd.rec(int(dur * fs), samplerate=int(fs),
                                      channels=1, dtype="float64")
@@ -224,7 +224,7 @@ class Aplicacion:
             self.barra_grab.config(value=transcurrido / dur)
             self.raiz.after(100, self._cuenta_regresiva)
             return
-        sd.wait()                                   # asegura que la grabación terminó
+        sd.wait()                                 
         self.x = self._grabacion[:, 0]
         self.barra_grab.config(value=1.0)
         self.lbl_contador.config(text="Grabación terminada")
@@ -353,7 +353,7 @@ class Aplicacion:
             self.ax_y.plot(frecs, Y, color="#c62828", linewidth=0.7)
             tope = max(X) * 1.05
             self.ax_x.set_ylim(0, tope)
-            self.ax_y.set_ylim(0, tope)   # misma escala para comparar
+            self.ax_y.set_ylim(0, tope)  
 
         for ax in (self.ax_h, self.ax_x, self.ax_y):
             ax.set_ylabel("Magnitud")
